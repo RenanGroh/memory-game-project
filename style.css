@@ -1,0 +1,215 @@
+* {
+    padding: 0;
+    margin: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: Arial, sans-serif;
+    background-color: #f0f2f5;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-height: 100vh;
+}
+
+header {
+    margin: 20px 0;
+    text-align: center;
+    color: #333;
+}
+
+.score {
+    font-size: 1.2rem;
+    color: #555;
+}
+
+.memory-game {
+    margin: 50px;
+    display: flex;
+    flex-wrap: wrap;
+    perspective: 1000px; /* Importante para o efeito 3D */
+}
+
+.memory-card {
+    width: 150px;
+    height: 200px;
+    margin: 5px;
+    position: relative;
+    box-shadow: 1px 1px 1px rgba(0,0,0,.3);
+    cursor: pointer;
+    transform-style: preserve-3d; /* Mantém o efeito 3D durante a transformação */
+    transition: transform 0.5s;
+}
+
+.memory-card:active {
+    transform: scale(0.97);
+    transition: transform 0.2s;
+}
+
+.memory-card.flip {
+    transform: rotateY(180deg);
+}
+
+.front-face{
+    width: 100%;
+    height: 100%;
+    padding: 20px;
+    position: absolute;
+    border-radius: 5px;
+    background: #fff;
+    backface-visibility: hidden; /* Esconde o lado de trás do elemento */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.front-face p {
+  font-size: 5em;
+  background-color: lightgreen;
+  padding: 30%;
+  border-radius: 10px;
+  border: #ccc solid 1px;
+}
+
+.back-face {
+    width: 100%;
+    height: 100%;
+    padding: 20px;
+    position: absolute;
+    border-radius: 5px;
+    background: #fff;
+    backface-visibility: hidden; /* Esconde o lado de trás do elemento */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.back-face p {
+  font-size: 5em;
+  background-color: lightgray;
+  padding: 30%;
+  border-radius: 10px;
+  border: #ccc solid 1px;
+}
+
+
+.front-face {
+    transform: rotateY(180deg); /* Começa virada para "dentro" */
+}
+
+/* --- Correção Específica para o Firefox --- */
+@-moz-document url-prefix() {
+
+  /* 1. Remove a animação de rotação do container da carta */
+  .memory-card.flip  {
+    transform: none;
+  }
+
+  /* 2. Esconde a face de trás (o '?') quando a carta está virada */
+  .memory-card.flip .back-face {
+    visibility: hidden;
+  }
+
+  /* 3. Garante que a face da frente seja exibida corretamente, resetando sua rotação inicial */
+  .memory-card.flip .front-face {
+    transform: rotateY(0);
+  }
+}
+
+footer {
+  margin-top: auto; /* Empurra o rodapé para baixo */
+  padding: 20px;
+  width: 100%;
+  text-align: center;
+  background-color: #ddd;
+  color: #555;
+}
+
+.game-info {
+    display: flex;
+    justify-content: center; /* Centraliza as tentativas */
+    width: 100%;
+    max-width: 600px; /* Tenta alinhar com o tabuleiro */
+    font-size: 1.2rem;
+    color: #333;
+    margin-bottom: -30px; /* Compensa a margem do tabuleiro */
+}
+
+/* --- Estilos Adicionais (Menu e Placar) --- */
+
+/* Menu Global */
+.global-menu {
+    width: 100%;
+    background-color: #333;
+    margin-bottom: 20px;
+}
+
+.global-menu ul {
+    display: flex;
+    justify-content: center;
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.global-menu li a {
+    display: block;
+    padding: 15px 25px;
+    text-decoration: none;
+    color: white;
+    font-weight: bold;
+    transition: background-color 0.2s;
+}
+
+.global-menu li a:hover {
+    background-color: #555;
+}
+
+/* Página do Placar */
+.placar-container {
+    width: 90%;
+    max-width: 800px;
+    margin: 20px auto;
+    padding: 20px;
+    background: #fff;
+    border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+}
+
+.placar-container h2 {
+    text-align: center;
+    margin-bottom: 20px;
+    color: #333;
+}
+
+.placar-container table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.placar-container th,
+.placar-container td {
+    padding: 12px 15px;
+    border: 1px solid #ddd;
+    text-align: left;
+}
+
+.placar-container th {
+    background-color: #f4f4f4;
+    font-weight: bold;
+}
+
+.placar-container tr:nth-child(even) {
+    background-color: #f9f9f9;
+}
+
+.placar-container tr:hover {
+    background-color: #f1f1f1;
+}
+
+.placar-container p {
+    text-align: center;
+    font-size: 1.1rem;
+    color: #777;
+}
