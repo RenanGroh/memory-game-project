@@ -1,7 +1,9 @@
 const nCards = 8;
 let cards = [];
-const attemptsSpan = document.getElementById('attempts');
-const board = document.getElementById("board")
+// const attemptsSpan = document.getElementById('attempts');
+// const board = document.getElementById("board")
+let attemptsSpan;
+let board;
 
 function createCard(value) {
   const memoryCard = document.createElement("div");
@@ -25,15 +27,6 @@ function createCard(value) {
   memoryCard.appendChild(backFace);
 
   return (memoryCard);
-}
-
-for (let i = 0; i < nCards; i++) {
-  const newCard1 = createCard(i);
-  const newCard2 = createCard(i);
-  board.appendChild(newCard1);
-  board.appendChild(newCard2);
-  cards.push(newCard1);
-  cards.push(newCard2);
 }
 
 
@@ -77,14 +70,24 @@ function checkForMatch() {
 }
 
 function disableCards() {
+  // Marca como encontrada para persistência
+  firstCard.classList.add('found');
+  secondCard.classList.add('found');
+
   // Remove o ouvinte de evento para que as cartas não possam mais ser clicadas
   firstCard.removeEventListener('click', flipCard);
   secondCard.removeEventListener('click', flipCard);
 
   // Incrementa o contador de pares
   matchedPairs++;
+
+  // Salva o estado após encontrar par
+  saveGameState();
+
   // Verifica se o jogo terminou (todos os pares encontrados)
   if (matchedPairs === nCards) {
+    // Limpa estado salvo pois o jogo terminou
+    clearGameState();
     // Atraso para o jogador ver a última carta virar
     setTimeout(endGame, 1000);
   }
@@ -101,6 +104,9 @@ function unflipCards() {
     secondCard.classList.remove('flip');
 
     resetBoard();
+
+    // Salva o estado após virar as cartas de volta (tentativa consumida)
+    saveGameState();
   }, 1500);
 }
 
@@ -110,16 +116,22 @@ function resetBoard() {
   [firstCard, secondCard] = [null, null];
 }
 
-(function shuffle() {
+function shuffle() {
   cards.forEach(card => {
     let randomPos = Math.floor(Math.random() * cards.length);
     card.style.order = randomPos;
   });
-})();
+}
 
 
 // Adiciona o evento de clique a cada uma das cartas
-cards.forEach(card => card.addEventListener('click', flipCard));
+function bindCardListeners() {
+  cards.forEach(card => {
+    if (!card.classList.contains('found')) {
+      card.addEventListener('click', flipCard);
+    }
+  });
+}
 
 
 // ===================================================================
@@ -129,6 +141,9 @@ cards.forEach(card => card.addEventListener('click', flipCard));
 function endGame() {
   // Desabilita o tabuleiro
   lockBoard = true;
+
+  // Limpa estado salvo ao finalizar (garante que não haverá restauração)
+  clearGameState();
 
   const playerName = prompt(`Parabéns! Você completou o jogo em ${attempts} tentativas.\n\nDigite seu nome para salvar:`);
 
@@ -143,6 +158,8 @@ function endGame() {
     // MODIFICADO: Redireciona para a página de jogar
     window.location.href = 'index.php?page=jogar';
   }
+
+  localStorage.removeItem('memoryGameState');
 }
 
 /**
@@ -201,3 +218,141 @@ function saveScoreByForm(playerName) {
   document.getElementById('scoreForm').submit();
 }
 */
+
+
+// ===================================================================
+// FUNÇÕES DE PERSISTÊNCIA DO ESTADO DO JOGO
+// ===================================================================
+
+// Função para salvar o estado do jogo
+function saveGameState() {
+  // cardOrder: valores das cartas na ordem do array 'cards'
+  const cardOrder = Array.from(cards).map(c => Number(c.dataset.cardValue));
+  // cardOrderCSS: ordem CSS (style.order) para manter disposição visual
+  const cardOrderCSS = Array.from(cards).map(c => Number(c.style.order) || 0);
+  // matchedCards: índices das cartas marcadas como 'found'
+  const matchedCards = Array.from(cards)
+    .map((card, i) => card.classList.contains("found") ? i : null)
+    .filter(i => i !== null);
+
+  const gameState = {
+    cardOrder,
+    cardOrderCSS,
+    matchedCards,
+    attempts: attempts,
+    timestamp: new Date().toISOString()
+  };
+
+  localStorage.setItem('memoryGameState', JSON.stringify(gameState));
+  console.log('Jogo salvo.', gameState);
+}
+
+function loadGameState() {
+  const savedState = localStorage.getItem('memoryGameState');
+  if (!savedState) return null;
+  try {
+    return JSON.parse(savedState);
+  } catch (e) {
+    console.warn('Estado salvo corrompido, removendo.', e);
+    localStorage.removeItem('memoryGameState');
+    return null;
+  }
+}
+
+function clearGameState() {
+  localStorage.removeItem('memoryGameState');
+  console.log('Estado do jogo limpo.');
+}
+
+function restoreGame(state) {
+  console.log('Restaurando jogo salvo', state);
+
+  // Proteções contra estados antigos/incompletos
+  const cardOrder = Array.isArray(state.cardOrder) ? state.cardOrder : [];
+  const cardOrderCSS = Array.isArray(state.cardOrderCSS)
+    ? state.cardOrderCSS
+    : cardOrder.map((_, i) => i); // fallback: ordem sequencial
+  const matchedCards = Array.isArray(state.matchedCards) ? state.matchedCards : [];
+
+  // Se não houver cardOrder válido, monta novo tabuleiro
+  if (cardOrder.length === 0) {
+    buildNewBoard();
+    return;
+  }
+
+  board.innerHTML = "";
+  cards = [];
+
+  // Recria as cartas na ordem salva (ou padrão)
+  cardOrder.forEach((value, i) => {
+    const card = createCard(value);
+    card.style.order = (cardOrderCSS[i] !== undefined) ? cardOrderCSS[i] : i;
+    board.appendChild(card);
+    cards.push(card);
+  });
+
+  // Marca cartas já encontradas: adiciona 'found' + 'flip' e remove listener
+  matchedCards.forEach(index => {
+    const c = cards[index];
+    if (c) {
+      c.classList.add('found', 'flip'); // garante que a face fique visível
+      // remove event listener caso exista
+      c.removeEventListener('click', flipCard);
+    }
+  });
+
+  attempts = Number(state.attempts) || 0;
+  attemptsSpan.textContent = attempts;
+  matchedPairs = Math.floor((matchedCards.length || 0) / 2);
+
+  // Garante estado interno consistente
+  resetBoard();
+
+  // Adiciona listeners apenas nas cartas que não foram encontradas
+  bindCardListeners();
+
+  console.log('Restauração concluída: attempts=', attempts, 'matchedPairs=', matchedPairs);
+}
+
+
+// ===================================================================
+// INICIALIZAÇÃO: monta o tabuleiro (novo jogo) ou restaura se houver
+// ===================================================================
+
+function buildNewBoard() {
+  board.innerHTML = "";
+  cards = [];
+
+  for (let i = 0; i < nCards; i++) {
+    const newCard1 = createCard(i);
+    const newCard2 = createCard(i);
+    board.appendChild(newCard1);
+    board.appendChild(newCard2);
+    cards.push(newCard1);
+    cards.push(newCard2);
+  }
+
+  shuffle();
+  bindCardListeners();
+
+  attempts = 0;
+  matchedPairs = 0;
+  attemptsSpan.textContent = attempts;
+}
+
+function initGame() {
+  const saved = loadGameState();
+  if (saved) {
+    restoreGame(saved);
+  } else {
+    buildNewBoard();
+  }
+}
+
+
+// Inicia
+document.addEventListener('DOMContentLoaded', () => {
+  attemptsSpan = document.getElementById('attempts');
+  board = document.getElementById('board');
+  initGame();
+});
